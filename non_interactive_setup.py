@@ -12,7 +12,7 @@ from pathlib import Path
 
 import requests
 
-DEFAULT_MANIFEST_URL = "https://m87-md-prod-assets.s3.us-west-2.amazonaws.com/station/mds2/production_manifest.json"
+LOCAL_MANIFEST_PATH = Path(__file__).parent / "moondream2.manifest.json"
 CUDA_VERSION = "12.6"
 TORCH_INDEX_URL = "https://download.pytorch.org/whl/cu126"
 
@@ -65,15 +65,14 @@ def install_pytorch_and_deps():
 
 def install_backend_requirements():
     """Install backend requirements from the manifest."""
-    log("Fetching production manifest")
+    log("Loading local manifest")
 
     try:
-        response = requests.get(DEFAULT_MANIFEST_URL, timeout=30)
-        response.raise_for_status()
-        manifest_data = response.json()
-        log("✓ Manifest fetched successfully")
+        with open(LOCAL_MANIFEST_PATH, "r") as f:
+            manifest_data = json.load(f)
+        log("✓ Manifest loaded successfully")
     except Exception as e:
-        log(f"✗ Failed to fetch manifest: {e}")
+        log(f"✗ Failed to load manifest: {e}")
         raise
 
     # Get backend requirements
