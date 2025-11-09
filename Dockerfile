@@ -1,3 +1,14 @@
+# Moondream Station Non-Interactive Server
+#
+# Build:
+#   docker build -t moondream-station .
+#
+# Run:
+#   docker run --gpus all -p 2020:2020 moondream-station
+#
+# Test:
+#   curl http://localhost:2020/health
+
 FROM nvidia/cuda:12.6.0-base-ubuntu22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -32,5 +43,8 @@ RUN uv sync && uv pip install moondream_station
 # - Setup backend requirements
 RUN uv run non_interactive_setup.py
 
-# Set default command to run moondream-station
-CMD ["uv", "run", "moondream-station"]
+# Expose the default API server port
+EXPOSE 2020
+
+# Set default command to run non-interactive server
+CMD ["uv", "run", "non_interactive_server.py"]
