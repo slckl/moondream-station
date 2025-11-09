@@ -26,7 +26,7 @@ from moondream_station.core.config import SERVICE_PORT, ConfigManager
 from moondream_station.core.manifest import ManifestManager
 from moondream_station.core.rest_server import RestServer
 
-DEFAULT_MANIFEST_URL = "https://m87-md-prod-assets.s3.us-west-2.amazonaws.com/station/mds2/production_manifest.json"
+DEFAULT_MANIFEST_PATH = str(Path(__file__).parent / "moondream2.manifest.json")
 DEFAULT_HOST = "0.0.0.0"  # Bind to all interfaces for Docker compatibility
 
 
@@ -35,7 +35,7 @@ class NonInteractiveServer:
 
     def __init__(
         self,
-        manifest_url: str = DEFAULT_MANIFEST_URL,
+        manifest_url: str = DEFAULT_MANIFEST_PATH,
         host=None,
         port=None,
     ):
@@ -193,7 +193,7 @@ def main():
     parser.add_argument(
         "--manifest",
         type=str,
-        default=DEFAULT_MANIFEST_URL,
+        default=DEFAULT_MANIFEST_PATH,
         help="Manifest URL or local path",
     )
 

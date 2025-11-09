@@ -1,9 +1,10 @@
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from PIL import Image
-import logging
 import base64
 import io
+import logging
+
+import torch
+from PIL import Image
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +25,22 @@ def get_model_service():
     if _model_service is None:
         model_id = _model_args.get("model_id", "vikhyatk/moondream2")
         revision_id = _model_args.get("revision_id", None)
-        _model_service = ModelService(model_id, revision_id)
+        local_files_only = _model_args.get("local_files_only", False)
+        _model_service = ModelService(model_id, revision_id, local_files_only)
     return _model_service
 
 
 class ModelService:
-    def __init__(self, model_name: str, revision: str):
+    def __init__(self, model_name: str, revision: str, local_files_only: bool = False):
         self.model_name = model_name
         self.revision = revision
         self.device = self._get_best_device()
 
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_name, revision=revision, trust_remote_code=True
+            model_name,
+            revision=revision,
+            trust_remote_code=True,
+            local_files_only=local_files_only,
         )
 
         if torch.cuda.is_available():

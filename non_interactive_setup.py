@@ -7,10 +7,7 @@ This script sets up CUDA backend and downloads the moondream2 model for inferenc
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
-
-import requests
 
 LOCAL_MANIFEST_PATH = Path(__file__).parent / "moondream2.manifest.json"
 CUDA_VERSION = "12.6"
@@ -63,133 +60,6 @@ def install_pytorch_and_deps():
     run_command(cmd, "PyTorch and core ML dependencies installation")
 
 
-def install_backend_requirements():
-    """Install backend requirements from the manifest."""
-    log("Loading local manifest")
-
-    try:
-        with open(LOCAL_MANIFEST_PATH, "r") as f:
-            manifest_data = json.load(f)
-        log("✓ Manifest loaded successfully")
-    except Exception as e:
-        log(f"✗ Failed to load manifest: {e}")
-        raise
-
-    # Get backend requirements
-    backends = manifest_data.get("backends", {})
-
-    for backend_id, backend_info in backends.items():
-        log(f"Processing backend: {backend_id}")
-
-        # Download and extract backend if it has a download URL
-        download_url = backend_info.get("download_url")
-        if download_url:
-            log(f"Downloading backend from {download_url}")
-
-            try:
-                response = requests.get(download_url, timeout=60)
-                response.raise_for_status()
-
-                # Extract to backends directory
-                backends_dir = Path("backends")
-                backends_dir.mkdir(exist_ok=True)
-
-                # Save tarball temporarily
-                with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as f:
-                    f.write(response.content)
-                    tarball_path = f.name
-
-                # Extract
-                import tarfile
-
-                with tarfile.open(tarball_path, "r:gz") as tar:
-                    tar.extractall(path=backends_dir)
-
-                Path(tarball_path).unlink()
-                log(f"✓ Backend {backend_id} extracted")
-
-                # Install requirements from the extracted backend
-                backend_name = download_url.split("/")[-1].replace(".tar.gz", "")
-                requirements_file = backends_dir / backend_name / "requirements.txt"
-
-                if requirements_file.exists():
-                    log(f"Installing requirements from {requirements_file}")
-
-                    # Read requirements and install with CUDA support
-                    with open(requirements_file) as f:
-                        requirements_content = f.read()
-
-                    # Create temporary requirements file
-                    with tempfile.NamedTemporaryFile(
-                        mode="w", suffix=".txt", delete=False
-                    ) as f:
-                        f.write(requirements_content)
-                        temp_requirements = f.name
-
-                    # Check if requirements include torch packages
-                    has_torch = any(
-                        pkg.startswith(("torch", "torchvision", "torchaudio"))
-                        for pkg in requirements_content.lower().split("\n")
-                    )
-
-                    cmd = [
-                        "uv",
-                        "pip",
-                        "install",
-                        "-r",
-                        temp_requirements,
-                    ]
-
-                    # Add torch index URL if torch packages are present
-                    if has_torch:
-                        cmd.extend(["--extra-index-url", TORCH_INDEX_URL])
-
-                    run_command(cmd, f"Backend {backend_id} requirements installation")
-                    Path(temp_requirements).unlink()
-                else:
-                    log(f"No requirements.txt found for {backend_id}")
-
-            except Exception as e:
-                log(f"✗ Failed to process backend {backend_id}: {e}")
-                raise
-
-
-def download_moondream2_model():
-    """Pre-download the moondream2 model to avoid runtime downloads."""
-    log("Pre-downloading moondream2 model")
-
-    # Create a simple script to trigger model download
-    download_script = """
-import torch
-from transformers import AutoModelForCausalLM
-import os
-
-# Set HuggingFace cache to a predictable location
-cache_dir = os.path.expanduser("~/.cache/huggingface")
-os.makedirs(cache_dir, exist_ok=True)
-
-print("Downloading moondream2 model...")
-model = AutoModelForCausalLM.from_pretrained(
-    "vikhyatk/moondream2",
-    revision="2025-06-21",
-    trust_remote_code=True,
-    cache_dir=cache_dir
-)
-print("Model downloaded successfully!")
-print(f"Model config commit hash: {model.config._commit_hash}")
-"""
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(download_script)
-        script_path = f.name
-
-    try:
-        cmd = ["uv", "run", script_path]
-        run_command(cmd, "Moondream2 model download")
-    finally:
-        Path(script_path).unlink()
-
-
 def create_config():
     """Create configuration file to store CUDA version."""
     log("Creating configuration")
@@ -203,12 +73,91 @@ def create_config():
         "torch_index_url": TORCH_INDEX_URL,
         "setup_completed": True,
         "current_model": "moondream-2",
+        "models_dir": str(app_dir / "models"),
+        "manifest_url": str(LOCAL_MANIFEST_PATH),
     }
 
     with open(config_file, "w") as f:
         json.dump(config, f, indent=2)
 
     log(f"✓ Configuration saved to {config_file}")
+    return config
+
+
+def download_backend_and_model():
+    """Download backend using ManifestManager and initialize model with specific revision."""
+    log("Downloading backend and moondream2 model")
+
+    # Import here after dependencies are installed
+    from moondream_station.core.config import ConfigManager
+    from moondream_station.core.manifest import ManifestManager
+
+    # Create config manager
+    config_manager = ConfigManager()
+
+    # Create manifest manager
+    manifest_manager = ManifestManager(config_manager)
+
+    # Load manifest
+    log(f"Loading local manifest from {LOCAL_MANIFEST_PATH}")
+    success = manifest_manager.load_manifest(str(LOCAL_MANIFEST_PATH))
+    if not success:
+        raise Exception("Failed to load manifest")
+
+    log("✓ Manifest loaded successfully")
+
+    # Get the moondream-2 model info
+    models = manifest_manager.get_models()
+    if "moondream-2" not in models:
+        raise Exception("moondream-2 model not found in manifest")
+
+    model_info = models["moondream-2"]
+    backend_id = model_info.backend
+
+    log(f"Model: {model_info.name}")
+    log(f"Backend: {backend_id}")
+
+    # Download the backend
+    log(f"Downloading backend: {backend_id}")
+    if not manifest_manager.download_backend(backend_id):
+        raise Exception(f"Failed to download backend: {backend_id}")
+
+    log(f"✓ Backend {backend_id} downloaded and requirements installed")
+
+    # Load the backend and initialize it with the specific revision
+    log("Loading backend module")
+    backend_module = manifest_manager.load_backend(backend_id)
+    if not backend_module:
+        raise Exception(f"Failed to load backend module: {backend_id}")
+
+    log("✓ Backend module loaded")
+
+    # Initialize backend with moondream2 revision 2025-06-21
+    log("Initializing backend with moondream2 revision 2025-06-21")
+
+    # Prepare args with the specific revision
+    init_args = model_info.args.copy()
+    init_args["revision_id"] = "2025-06-21"
+    init_args["local_files_only"] = False  # Allow downloading during setup
+
+    log(f"Backend init args: {init_args}")
+
+    if hasattr(backend_module, "init_backend"):
+        backend_module.init_backend(**init_args)
+        log("✓ Backend initialized with args")
+
+    # Trigger model download by calling get_model_service
+    # This will download the model with the specified revision
+    log("Triggering model download (this may take a while)...")
+    if hasattr(backend_module, "get_model_service"):
+        model_service = backend_module.get_model_service()
+        log(f"✓ Model loaded successfully")
+        log(f"Model device: {model_service.device}")
+        log(f"Model revision: {model_service.revision}")
+    else:
+        log("⚠ Backend does not have get_model_service function")
+
+    log("✓ Backend and model setup completed")
 
 
 def main():
@@ -220,18 +169,16 @@ def main():
         # Step 1: Install PyTorch with CUDA support
         install_pytorch_and_deps()
 
-        # Step 2: Install backend requirements and download backends
-        install_backend_requirements()
-
-        # Step 3: Pre-download moondream2 model
-        download_moondream2_model()
-
-        # Step 4: Create configuration
+        # Step 2: Create initial configuration
         create_config()
+
+        # Step 3: Download backend and model using ManifestManager
+        download_backend_and_model()
 
         log("=" * 60)
         log("✓ Setup completed successfully!")
         log("Moondream Station is ready to use with moondream2 model")
+        log("Model revision: 2025-06-21")
         log("=" * 60)
 
     except Exception as e:

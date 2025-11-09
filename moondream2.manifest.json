@@ -9,7 +9,9 @@
       "description": "Great for bulk tasks.",
       "backend": "moondream_backend",
       "args": {
-        "model_id": "vikhyatk/moondream2"
+        "model_id": "vikhyatk/moondream2",
+        "revision_id": "2025-06-21",
+        "local_files_only": true
       },
       "system_requirements": {
         "RAM": "8GB minimum",
@@ -22,7 +24,7 @@
   "backends": {
     "moondream_backend": {
       "name": "Moondream Backend (Full)",
-      "download_url": "https://moondream-server-assets-dev.s3.us-west-2.amazonaws.com/mds_backend_0.tar.gz",
+      "download_url": "backends/mds_backend_0",
       "entry_module": "backend",
       "functions": ["caption", "query", "detect", "point"],
       "version": "1.0.0",
