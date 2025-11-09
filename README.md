@@ -1,3 +1,12 @@
+# bad docker version of moondream-station
+
+this is a vibe-modified version of `moondream-station` which includes a `Dockerfile`
+that is ready to serve `moondream2` as fast as possible.
+no interactive setup, no interactive runtime, pure dumb server on start.
+
+# original README below:
+------
+
 <div>
    <p align="center">
    <img src="https://raw.githubusercontent.com/m87-labs/moondream-station/55878b16dd3a675a9ccf9a292975aee97d055beb/assets/md_logo_clean.png" alt="Moondream Station Logo" width="200"/>
@@ -27,13 +36,13 @@
 
 ### How It Works
 
-🚀 **Launches Local Server**  
+🚀 **Launches Local Server**
    All inference runs on your device
 
-🔧 **Control via CLI**  
+🔧 **Control via CLI**
    Caption images, answer questions, and manage settings
 
-🌐 **Access via HTTP**  
+🌐 **Access via HTTP**
    Connect to `http://localhost:2020/v1` through REST or our [Python](https://pypi.org/project/moondream/), [Node](https://www.npmjs.com/package/moondream), or [OpenAI](https://github.com/openai/openai-python) client
 
 </td>
@@ -76,7 +85,7 @@ We like to think Moondream has 20/20 vision; that’s why, by default, we launch
 - `restart` - Restart server
 
 ### Inference
-**Access via HTTP**: 
+**Access via HTTP**:
 Point any of our inference clients at your Moondream Station; for example, with our python client you can do:
 
 ```python
@@ -95,7 +104,7 @@ print("Answer:", answer)
 ```
 For more information on our clients visit: [Python](https://pypi.org/project/moondream/), [Node](https://www.npmjs.com/package/moondream), [Quick Start](https://moondream.ai/c/docs/quickstart)
 
-**Connect via CLI**: 
+**Connect via CLI**:
 Use all the capabilities of Moondream directly through your terminal. No need to touch any code!
 
 - `infer <function> [args]` - Run single inference
