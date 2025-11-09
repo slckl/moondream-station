@@ -22,7 +22,7 @@ from pathlib import Path
 # Add moondream_station to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from moondream_station.core.config import SERVICE_HOST, SERVICE_PORT, ConfigManager
+from moondream_station.core.config import SERVICE_PORT, ConfigManager
 from moondream_station.core.manifest import ManifestManager
 from moondream_station.core.rest_server import RestServer
 
@@ -36,8 +36,8 @@ class NonInteractiveServer:
     def __init__(
         self,
         manifest_url: str = DEFAULT_MANIFEST_URL,
-        host: str = None,
-        port: int = None,
+        host=None,
+        port=None,
     ):
         self.manifest_url = manifest_url
         self.host = host or DEFAULT_HOST

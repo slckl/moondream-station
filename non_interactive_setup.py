@@ -172,6 +172,7 @@ os.makedirs(cache_dir, exist_ok=True)
 print("Downloading moondream2 model...")
 model = AutoModelForCausalLM.from_pretrained(
     "vikhyatk/moondream2",
+    revision="2025-06-21",
     trust_remote_code=True,
     cache_dir=cache_dir
 )
@@ -202,6 +203,7 @@ def create_config():
         "torch_cuda_version": CUDA_VERSION,
         "torch_index_url": TORCH_INDEX_URL,
         "setup_completed": True,
+        "current_model": "moondream-2",
     }
 
     with open(config_file, "w") as f:
